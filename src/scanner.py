@@ -13,6 +13,7 @@ class Scanner():
         self.onScannerNotFound = onScannerNotFound
         self.running = False
         self.thread = None
+        self.debug = False
 
     def load_reference_image(self, image_path):
         reference_image = cv2.imread(resource_path(image_path))
@@ -30,24 +31,27 @@ class Scanner():
                 screenshot = cv2.cvtColor(np.array(screenshot_image), cv2.COLOR_RGB2BGR)
                 reference_image = self.load_reference_image(resource_path(self.reference_image_path))
 
-                orb = cv2.ORB_create()
+                result = cv2.matchTemplate(screenshot, reference_image, cv2.TM_CCOEFF_NORMED)
+                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
-                kp1, des1 = orb.detectAndCompute(reference_image, None)
-                kp2, des2 = orb.detectAndCompute(screenshot, None)
-
-                bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-                matches = bf.match(des1, des2)
-
-                matches = sorted(matches, key=lambda x: x.distance)
-
-                if len(matches) > 0:
+                if max_val > 0.8:
                     print("Scanner found")
-                    self.onScannerFound()
+                    if self.onScannerFound is not None:
+                        self.onScannerFound()
                 else:
                     print("Scanner not found")
-                    self.onScannerNotFound()
+                    if self.onScannerNotFound is not None:
+                        self.onScannerNotFound()
 
                 sleep(1)  # Prevent excessive CPU usage
+
+                if debug: # Display the result
+                    cv2.rectangle(screenshot, max_loc, (max_loc[0] + reference_image.shape[1], max_loc[1] + reference_image.shape[0]), (0, 255, 0), 2)
+
+                    cv2.imshow("Scanner", screenshot)
+
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
 
             except Exception as e:
                 print(f"Error during image detection: {str(e)}")
