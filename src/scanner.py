@@ -14,6 +14,7 @@ class Scanner():
         self.running = False
         self.thread = None
         self.debug = False
+        self.threshold = 0.8
 
     def load_reference_image(self, image_path):
         reference_image = cv2.imread(resource_path(image_path))
@@ -34,7 +35,7 @@ class Scanner():
                 result = cv2.matchTemplate(screenshot, reference_image, cv2.TM_CCOEFF_NORMED)
                 min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
-                if max_val > 0.8:
+                if max_val > self.threshold:
                     print("Scanner found")
                     if self.onScannerFound is not None:
                         self.onScannerFound()
@@ -70,3 +71,6 @@ class Scanner():
         if self.thread:
             self.thread.join()
             print("Scanner stopped")
+
+    def set_threshold(self, threshold):
+        self.threshold = threshold

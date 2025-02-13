@@ -14,5 +14,5 @@ if __name__ == "__main__":
     audio = AudioPlayer("assets\\audio\\alert.mp3")
     scanner = Scanner(1, "assets\\images\\target_image.png", audio.play, audio.stop)
 
-    visual = Visual(toggle_scan, audio.set_volume)
+    visual = Visual(toggle_scan, audio.set_volume, scanner.set_threshold)
     visual.mainloop()
