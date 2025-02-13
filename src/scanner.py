@@ -14,20 +14,6 @@ class Scanner():
         self.running = False
         self.thread = None
 
-    def filter_red_color(self, image):
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_red = np.array([0, 100, 100])   # Ajuste esses valores para a faixa exata da cor vermelha
-        upper_red = np.array([10, 255, 255])  # Pode precisar de ajustes
-        mask1 = cv2.inRange(hsv, lower_red, upper_red)
-
-        lower_red2 = np.array([170, 100, 100])  # Tons mais escuros de vermelho
-        upper_red2 = np.array([180, 255, 255])
-        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-
-        mask = mask1 | mask2
-        result = cv2.bitwise_and(image, image, mask=mask)
-        return result
-
     def load_reference_image(self, image_path):
         reference_image = cv2.imread(resource_path(image_path))
         if reference_image is None:
@@ -44,27 +30,17 @@ class Scanner():
                 screenshot = cv2.cvtColor(np.array(screenshot_image), cv2.COLOR_RGB2BGR)
                 reference_image = self.load_reference_image(resource_path(self.reference_image_path))
 
-                screenshot_filtered = self.filter_red_color(screenshot)
-                reference_image_filtered = self.filter_red_color(reference_image)
+                orb = cv2.ORB_create()
 
-                result = cv2.matchTemplate(screenshot_filtered, reference_image_filtered, cv2.TM_CCOEFF_NORMED)
+                kp1, des1 = orb.detectAndCompute(reference_image, None)
+                kp2, des2 = orb.detectAndCompute(screenshot, None)
 
-                # draw the rectangle on the screenshot
-                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-                top_left = max_loc
-                bottom_right = (top_left[0] + reference_image.shape[1], top_left[1] + reference_image.shape[0])
-                cv2.rectangle(reference_image_filtered, top_left, bottom_right, (0, 255, 0), 2)
+                bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+                matches = bf.match(des1, des2)
 
-                cv2.imshow("Result", screenshot_filtered)
+                matches = sorted(matches, key=lambda x: x.distance)
 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-                print(f"Scanned")
-
-                locations = np.where(result >= 0.7)
-
-                if locations[0].size > 0:
+                if len(matches) > 0:
                     print("Scanner found")
                     self.onScannerFound()
                 else:
